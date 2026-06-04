@@ -1,0 +1,16 @@
+{
+    "data": [
+        {
+            "store": "backup",
+            "total": 107374182400,
+            "used": 76450000000,
+            "avail": 30924182400,
+            "mount-status": "mounted"
+        },
+        {
+            "store": "backup-main",
+            "error": "chunk store missing",
+            "mount-status": "unmounted"
+        }
+    ]
+}

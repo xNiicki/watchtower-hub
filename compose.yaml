@@ -1,0 +1,62 @@
+# Watchtower Hub — full stack. `docker compose up -d` builds the image and runs
+# the API, the scheduler (collect:run + alerts:evaluate), and Postgres.
+# Configuration comes from .env (copy .env.example → .env and fill it in).
+services:
+    db:
+        image: postgres:17
+        container_name: watchtower-hub-db
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-watchtower_hub}
+            POSTGRES_USER: ${DB_USERNAME:-watchtower}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+        ports:
+            - '127.0.0.1:5432:5432'
+        volumes:
+            - watchtower-hub-db-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-watchtower} -d ${DB_DATABASE:-watchtower_hub}']
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+    app:
+        build:
+            context: .
+        image: watchtower-hub:local
+        env_file: .env
+        environment:
+            DB_HOST: db
+            DB_PORT: 5432
+            APP_ENV: production
+            APP_DEBUG: 'false'
+        depends_on:
+            db:
+                condition: service_healthy
+        ports:
+            - '8000:80'
+        healthcheck:
+            # Healthy only after the entrypoint finished migrating and FrankenPHP is serving.
+            test: ['CMD', 'curl', '-fsS', 'http://localhost/api/v1/ping']
+            interval: 10s
+            timeout: 5s
+            retries: 12
+        restart: unless-stopped
+
+    scheduler:
+        image: watchtower-hub:local
+        env_file: .env
+        environment:
+            DB_HOST: db
+            DB_PORT: 5432
+            APP_ENV: production
+            APP_DEBUG: 'false'
+        # Wait until the app is healthy (= migrations done) before scheduling.
+        depends_on:
+            app:
+                condition: service_healthy
+        # Override the image entrypoint: this container only drives the scheduler.
+        entrypoint: ['php', 'artisan', 'schedule:work']
+        restart: unless-stopped
+
+volumes:
+    watchtower-hub-db-data:

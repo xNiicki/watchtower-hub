@@ -1,0 +1,32 @@
+{
+    "data": [
+        {
+            "backup-time": 1717308000,
+            "backup-type": "vm",
+            "backup-id": "111",
+            "size": 5368709120,
+            "files": []
+        },
+        {
+            "backup-time": 1717394400,
+            "backup-type": "vm",
+            "backup-id": "112",
+            "size": 5368709120,
+            "files": []
+        },
+        {
+            "backup-time": 1717480800,
+            "backup-type": "ct",
+            "backup-id": "200",
+            "size": 1073741824,
+            "files": []
+        },
+        {
+            "backup-time": 1717567200,
+            "backup-type": "vm",
+            "backup-id": "111",
+            "size": 5368709120,
+            "files": []
+        }
+    ]
+}

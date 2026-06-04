@@ -1,0 +1,16 @@
+{
+    "data": [
+        {
+            "backup-type": "vm",
+            "backup-id": "111",
+            "last-backup": 1717567200,
+            "backup-count": 4
+        },
+        {
+            "backup-type": "ct",
+            "backup-id": "200",
+            "last-backup": 1717480800,
+            "backup-count": 2
+        }
+    ]
+}

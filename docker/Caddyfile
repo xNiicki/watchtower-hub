@@ -1,0 +1,11 @@
+{
+	frankenphp
+	# LAN / behind-a-reverse-proxy deployment: serve plain HTTP, no auto-HTTPS.
+	auto_https off
+}
+
+:80 {
+	root * /app/public
+	encode zstd br gzip
+	php_server
+}
