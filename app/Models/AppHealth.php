@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\AppHealthFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,8 +19,8 @@ use Illuminate\Support\Carbon;
  * @property int $failed_jobs_24h
  * @property int $mail_sent_24h
  * @property Carbon|null $last_deploy_at
- * @property Carbon $snapshot_at
- * @property Carbon $received_at
+ * @property CarbonImmutable $snapshot_at
+ * @property CarbonImmutable $received_at
  */
 class AppHealth extends Model
 {
@@ -30,6 +31,9 @@ class AppHealth extends Model
 
     public $timestamps = false;
 
+    // Health snapshot written only by the ingest controller via updateOrCreate,
+    // never through a Filament form — follows the unguarded snapshot-model
+    // convention used by Metric and SyslogEntry.
     protected $guarded = [];
 
     protected function casts(): array
@@ -37,8 +41,8 @@ class AppHealth extends Model
         return [
             'healthy' => 'boolean',
             'last_deploy_at' => 'datetime',
-            'snapshot_at' => 'datetime',
-            'received_at' => 'datetime',
+            'snapshot_at' => 'immutable_datetime',
+            'received_at' => 'immutable_datetime',
         ];
     }
 

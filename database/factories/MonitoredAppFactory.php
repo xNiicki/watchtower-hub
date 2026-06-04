@@ -17,7 +17,7 @@ class MonitoredAppFactory extends Factory
         $slug = fake()->unique()->slug(2);
 
         return [
-            'name' => $slug,
+            'name' => \Illuminate\Support\Str::title(str_replace('-', ' ', $slug)),
             'slug' => $slug,
         ];
     }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\MonitoredAppFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -19,14 +20,13 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $slug
  * @property AppHealth|null $health
  */
+#[Fillable(['name', 'slug'])]
 class MonitoredApp extends Model
 {
     /** @use HasFactory<MonitoredAppFactory> */
     use HasApiTokens, HasFactory;
 
     protected $table = 'apps';
-
-    protected $fillable = ['name', 'slug'];
 
     public function health(): HasOne
     {
