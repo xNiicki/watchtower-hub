@@ -23,6 +23,10 @@ class AppResource extends Resource
 
     protected static ?string $modelLabel = 'app';
 
+    protected static ?string $pluralModelLabel = 'apps';
+
+    protected static ?string $recordTitleAttribute = 'name';
+
     protected static ?int $navigationSort = 25;
 
     public static function form(Schema $schema): Schema

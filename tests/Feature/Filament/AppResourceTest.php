@@ -15,9 +15,12 @@ class AppResourceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function actingAsOperator(): void
+    private function actingAsOperator(): User
     {
-        $this->actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        return $user;
     }
 
     public function test_unauthenticated_user_is_redirected(): void
@@ -44,7 +47,8 @@ class AppResourceTest extends TestCase
         $app->createToken('old', [TokenAbility::Ingest->value]); // pre-existing
 
         Livewire::test(ListApps::class)
-            ->callTableAction('mintToken', $app);
+            ->callTableAction('mintToken', $app)
+            ->assertNotified('Ingest token minted');
 
         // Exactly one ingest token remains (old revoked, new minted).
         $this->assertSame(1, $app->fresh()->tokens()->count());

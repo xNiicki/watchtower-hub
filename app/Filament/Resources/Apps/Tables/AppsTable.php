@@ -5,8 +5,11 @@ namespace App\Filament\Resources\Apps\Tables;
 use App\Enums\TokenAbility;
 use App\Models\MonitoredApp;
 use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Notifications\Notification;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -29,9 +32,11 @@ class AppsTable
                     ->placeholder('never'),
             ])
             ->recordActions([
+                // Token minting is unguarded because the hub is single-operator
+                // (same assumption documented in app/Filament/Pages/Tokens.php).
                 Action::make('mintToken')
                     ->label('Mint ingest token')
-                    ->icon('heroicon-o-key')
+                    ->icon(Heroicon::OutlinedKey)
                     ->requiresConfirmation()
                     ->modalDescription('This revokes any existing ingest token for this app and issues a new one. Copy it now — it is shown once.')
                     ->action(function (MonitoredApp $record): void {
@@ -47,6 +52,11 @@ class AppsTable
                             ->send();
                     }),
                 DeleteAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 }
