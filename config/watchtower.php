@@ -6,6 +6,12 @@ return [
         'email' => env('OPERATOR_EMAIL', 'admin@watchtower.local'),
     ],
 
+    'apps' => [
+        // Minutes since the last received snapshot after which an app is "stale"
+        // (shown unhealthy). Defaults to 3x the satellite's default 5-min interval.
+        'stale_after' => (int) env('APPS_STALE_AFTER_MINUTES', 15),
+    ],
+
     'ntfy' => [
         'base_url' => env('NTFY_BASE_URL'),           // e.g. http://192.168.1.30
         'topic' => env('NTFY_TOPIC', 'watchtower'),

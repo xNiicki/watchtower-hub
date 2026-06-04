@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AlertResource;
 use App\Http\Resources\TargetResource;
 use App\Models\Alert;
+use App\Models\MonitoredApp;
 use App\Models\Target;
 use App\Services\LatestMetrics;
 use Carbon\CarbonImmutable;
@@ -108,6 +109,29 @@ class SummaryController extends Controller
             ->withMetrics($metricsByTarget[$t->id] ?? [])
             ->toArray(request()));
 
+        // ----------------------------------------------------------------
+        // Monitored apps (satellite health) — hub computes staleness.
+        // ----------------------------------------------------------------
+        $staleAfter = (int) config('watchtower.apps.stale_after', 15);
+
+        $apps = MonitoredApp::with('health')->orderBy('name')->get()->map(function (MonitoredApp $app) use ($staleAfter) {
+            $health = $app->health;
+            $receivedAt = $health?->received_at;
+            $stale = $receivedAt === null || $receivedAt->lt(CarbonImmutable::now()->subMinutes($staleAfter));
+
+            return [
+                'name' => $app->name,
+                'healthy' => $health !== null && $health->healthy && ! $stale,
+                'errorsLastHour' => (int) ($health->errors_last_hour ?? 0),
+                'queueDepth' => (int) ($health->queue_depth ?? 0),
+                'failedJobs24h' => (int) ($health->failed_jobs_24h ?? 0),
+                'mailSent24h' => (int) ($health->mail_sent_24h ?? 0),
+                'lastDeployAt' => $health?->last_deploy_at?->toIso8601String(),
+                'lastSeenAt' => $receivedAt?->toIso8601String(),
+                'stale' => $stale,
+            ];
+        })->values();
+
         return response()->json([
             'targetsUp' => $targetsUp,
             'targetsTotal' => $targetsTotal,
@@ -115,7 +139,7 @@ class SummaryController extends Controller
             'openAlerts' => AlertResource::collection($openAlerts),
             // Summary sub-collections are FLAT arrays; only top-level list/detail endpoints use Laravel's {data:...} envelope.
             'nodes' => $nodesData->values(),
-            'apps' => [],
+            'apps' => $apps,
             'lastBackupAt' => $lastBackupAt?->toIso8601String(),
             'lastBackupOk' => $lastBackupOk,
             'tankUsagePercent' => $tankUsagePercent,
