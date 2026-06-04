@@ -22,6 +22,7 @@ class PagesRenderSmokeTest extends TestCase
         $this->get('/admin/tokens')->assertSuccessful();
         $this->get('/admin/targets')->assertSuccessful();
         $this->get('/admin/targets/create')->assertSuccessful();
+        $this->get('/admin/logs')->assertSuccessful();
         $this->get('/admin/rules')->assertSuccessful();
         $this->get('/admin/rules/create')->assertSuccessful();
     }
