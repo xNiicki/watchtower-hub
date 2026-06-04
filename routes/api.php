@@ -37,6 +37,8 @@ Route::prefix('v1')->group(function () {
 });
 
 // Satellite ingest — per-app tokens with the "ingest" ability only.
+// Deliberately NOT under the `v1` prefix: this is a push channel, not the versioned mobile read API.
+// Future schema changes are versioned via the payload `schemaVersion` field instead.
 Route::prefix('ingest')->middleware(['auth:sanctum', 'abilities:'.TokenAbility::Ingest->value])->group(function () {
     Route::post('/health', HealthController::class);
 });

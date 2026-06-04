@@ -56,8 +56,10 @@ class IngestApiTest extends TestCase
             'Authorization' => 'Bearer '.$token,
         ])->assertNoContent();
 
-        $this->assertSame(42, $app->fresh()->health->queue_depth);
-        $this->assertNotNull($app->fresh()->health->received_at);
+        $health = $app->fresh()->health;
+        $this->assertNotNull($health);
+        $this->assertSame(42, $health->queue_depth);
+        $this->assertNotNull($health->received_at);
     }
 
     public function test_ingest_is_idempotent_updateorcreate(): void
@@ -79,6 +81,16 @@ class IngestApiTest extends TestCase
         $token = $this->ingestToken($app);
 
         $this->postJson('/api/ingest/health', $this->payload(['slug' => 'something-else']), [
+            'Authorization' => 'Bearer '.$token,
+        ])->assertForbidden();
+    }
+
+    public function test_unknown_schema_version_is_rejected(): void
+    {
+        $app = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $token = $this->ingestToken($app);
+
+        $this->postJson('/api/ingest/health', $this->payload(['schemaVersion' => 999]), [
             'Authorization' => 'Bearer '.$token,
         ])->assertStatus(422);
     }

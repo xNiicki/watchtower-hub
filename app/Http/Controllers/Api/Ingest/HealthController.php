@@ -25,18 +25,18 @@ class HealthController extends Controller
         $data = $request->validate([
             'slug' => ['required', 'string'],
             'snapshotAt' => ['required', 'date'],
-            'schemaVersion' => ['required', 'integer'],
+            'schemaVersion' => ['required', 'integer', 'in:1'],
             'healthy' => ['required', 'boolean'],
-            'errorsLastHour' => ['required', 'integer', 'min:0'],
-            'queueDepth' => ['required', 'integer', 'min:0'],
-            'failedJobs24h' => ['required', 'integer', 'min:0'],
-            'mailSent24h' => ['required', 'integer', 'min:0'],
+            'errorsLastHour' => ['required', 'integer', 'min:0', 'max:2000000000'],
+            'queueDepth' => ['required', 'integer', 'min:0', 'max:2000000000'],
+            'failedJobs24h' => ['required', 'integer', 'min:0', 'max:2000000000'],
+            'mailSent24h' => ['required', 'integer', 'min:0', 'max:2000000000'],
             'lastDeployAt' => ['nullable', 'date'],
         ]);
 
         // Cross-check the claimed slug against the token's app.
         if ($data['slug'] !== $app->slug) {
-            abort(422, 'Payload slug does not match the authenticated app.');
+            abort(403, 'Payload slug does not match the authenticated app.');
         }
 
         AppHealth::updateOrCreate(
