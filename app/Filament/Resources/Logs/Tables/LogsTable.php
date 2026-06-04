@@ -3,6 +3,9 @@
 namespace App\Filament\Resources\Logs\Tables;
 
 use App\Models\SyslogEntry;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
@@ -92,6 +95,12 @@ class LogsTable
                             ->placeholder('—')
                             ->columnSpanFull(),
                     ]),
+                DeleteAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

@@ -13,9 +13,10 @@ use Filament\Tables\Table;
 /**
  * Read-only view over ingested syslog entries.
  *
- * Syslog rows are append-only — written exclusively by the UDP listener via the
- * recorder, never through Filament. So this resource exposes a list/search/view
- * surface only: no create, edit, or delete. It mirrors the mobile /api/v1/logs
+ * Syslog rows are written exclusively by the UDP listener via the recorder —
+ * never created or edited through Filament. The operator can, however, delete
+ * entries for retention/cleanup: per-row, in bulk, or by pruning everything
+ * outside a kept timespan (see ListLogs). It mirrors the mobile /api/v1/logs
  * query (host / severity / message search, newest first).
  */
 class LogResource extends Resource

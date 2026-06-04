@@ -80,6 +80,80 @@ class LogResourceTest extends TestCase
             ->assertCanNotSeeTableRecords([$other]);
     }
 
+    public function test_single_entry_can_be_deleted(): void
+    {
+        $this->actingAsOperator();
+
+        $entry = SyslogEntry::factory()->create();
+
+        Livewire::test(ListLogs::class)
+            ->callTableAction('delete', $entry);
+
+        $this->assertDatabaseMissing('syslog_entries', ['id' => $entry->id]);
+    }
+
+    public function test_selected_entries_can_be_bulk_deleted(): void
+    {
+        $this->actingAsOperator();
+
+        $keep = SyslogEntry::factory()->create();
+        $drop = SyslogEntry::factory()->count(2)->create();
+
+        Livewire::test(ListLogs::class)
+            ->callTableBulkAction('delete', $drop);
+
+        $this->assertDatabaseHas('syslog_entries', ['id' => $keep->id]);
+        foreach ($drop as $entry) {
+            $this->assertDatabaseMissing('syslog_entries', ['id' => $entry->id]);
+        }
+    }
+
+    public function test_prune_preset_deletes_entries_older_than_window(): void
+    {
+        $this->actingAsOperator();
+
+        $recent = SyslogEntry::factory()->create(['logged_at' => now()->subDays(2)]);
+        $old = SyslogEntry::factory()->create(['logged_at' => now()->subDays(30)]);
+
+        Livewire::test(ListLogs::class)
+            ->callAction('prune', data: ['window' => '7d']);
+
+        $this->assertDatabaseHas('syslog_entries', ['id' => $recent->id]);
+        $this->assertDatabaseMissing('syslog_entries', ['id' => $old->id]);
+    }
+
+    public function test_prune_custom_range_deletes_outside_the_kept_span(): void
+    {
+        $this->actingAsOperator();
+
+        $before = SyslogEntry::factory()->create(['logged_at' => now()->subDays(10)]);
+        $inside = SyslogEntry::factory()->create(['logged_at' => now()->subDays(3)]);
+        $after = SyslogEntry::factory()->create(['logged_at' => now()->addDay()]);
+
+        Livewire::test(ListLogs::class)
+            ->callAction('prune', data: [
+                'window' => 'custom',
+                'from' => now()->subDays(5)->toDateTimeString(),
+                'until' => now()->toDateTimeString(),
+            ]);
+
+        $this->assertDatabaseMissing('syslog_entries', ['id' => $before->id]);
+        $this->assertDatabaseHas('syslog_entries', ['id' => $inside->id]);
+        $this->assertDatabaseMissing('syslog_entries', ['id' => $after->id]);
+    }
+
+    public function test_prune_custom_with_no_bounds_deletes_nothing(): void
+    {
+        $this->actingAsOperator();
+
+        $entry = SyslogEntry::factory()->create();
+
+        Livewire::test(ListLogs::class)
+            ->callAction('prune', data: ['window' => 'custom']);
+
+        $this->assertDatabaseHas('syslog_entries', ['id' => $entry->id]);
+    }
+
     public function test_severity_color_mapping(): void
     {
         $this->assertSame('danger', LogsTable::severityColor('crit'));
