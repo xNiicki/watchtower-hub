@@ -1,10 +1,17 @@
 #!/bin/sh
 set -e
 
+# Zero-config APP_KEY: use the provided env value, otherwise generate one and
+# persist it to the storage volume so it stays stable across restarts. This is
+# what lets the standalone deployment run with no .env at all.
+KEY_FILE=/app/storage/app_key
 if [ -z "$APP_KEY" ]; then
-	echo "ERROR: APP_KEY is not set. Generate one with:  php artisan key:generate --show" >&2
-	echo "       then put it in your .env before starting the stack." >&2
-	exit 1
+	if [ ! -f "$KEY_FILE" ]; then
+		echo "[entrypoint] No APP_KEY provided — generating and persisting one..."
+		php artisan key:generate --show >"$KEY_FILE"
+	fi
+	APP_KEY="$(cat "$KEY_FILE")"
+	export APP_KEY
 fi
 
 echo "[entrypoint] Running migrations..."

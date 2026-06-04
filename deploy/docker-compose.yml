@@ -1,0 +1,73 @@
+# Watchtower Hub — standalone deployment. No repo clone required:
+#
+#   curl -O https://raw.githubusercontent.com/xNiicki/watchtower-hub/main/deploy/docker-compose.yml
+#   docker compose up -d
+#
+# Then open  http://<this-host>:8000  and finish setup in the UI.
+# No .env editing: the database is internal and APP_KEY is auto-generated.
+name: watchtower-hub
+
+services:
+    db:
+        image: postgres:17
+        environment:
+            POSTGRES_DB: watchtower_hub
+            POSTGRES_USER: watchtower
+            # Internal-only credential — the db port is NOT published outside the compose network.
+            POSTGRES_PASSWORD: watchtower-internal
+        volumes:
+            - db-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U watchtower -d watchtower_hub']
+            interval: 5s
+            timeout: 3s
+            retries: 10
+        restart: unless-stopped
+
+    app:
+        image: ghcr.io/xniicki/watchtower-hub:latest
+        environment:
+            APP_ENV: production
+            APP_DEBUG: 'false'
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_DATABASE: watchtower_hub
+            DB_USERNAME: watchtower
+            DB_PASSWORD: watchtower-internal
+        depends_on:
+            db:
+                condition: service_healthy
+        ports:
+            - '8000:80'
+        volumes:
+            - storage:/app/storage
+        healthcheck:
+            test: ['CMD', 'curl', '-fsS', 'http://localhost/api/v1/ping']
+            interval: 10s
+            timeout: 5s
+            retries: 12
+        restart: unless-stopped
+
+    scheduler:
+        image: ghcr.io/xniicki/watchtower-hub:latest
+        environment:
+            APP_ENV: production
+            APP_DEBUG: 'false'
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_DATABASE: watchtower_hub
+            DB_USERNAME: watchtower
+            DB_PASSWORD: watchtower-internal
+        depends_on:
+            app:
+                condition: service_healthy
+        # Load the auto-generated APP_KEY (written by the app to the shared storage
+        # volume on first boot), then drive the scheduler.
+        entrypoint: ['sh', '-c', 'export APP_KEY=$$(cat /app/storage/app_key 2>/dev/null); exec php artisan schedule:work']
+        volumes:
+            - storage:/app/storage
+        restart: unless-stopped
+
+volumes:
+    db-data:
+    storage:
