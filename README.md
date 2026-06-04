@@ -56,7 +56,25 @@ Then open **`http://<host>:8000/admin`** and do everything in the UI:
 
 No `.env` editing required — all configuration lives in the admin UI (encrypted at rest).
 
-> Developing from source instead? `cp .env.example .env`, set the values there, and use the repo's `compose.yaml` (which builds the image locally).
+## Local development
+
+For hacking on the hub itself (not just running it), the repo ships a Docker dev
+loop with **live reload** — edit PHP/Blade and see it on the next request, no
+rebuild:
+
+```bash
+cp .env.example .env          # set APP_KEY (php artisan key:generate) + DB creds
+docker compose up -d          # builds the image, then bind-mounts your source
+docker compose exec app php artisan watchtower:admin   # choose an admin password
+```
+
+`compose.yaml` builds the image and `compose.override.yaml` (auto-merged by
+`docker compose`) bind-mounts your working tree over it. opcache revalidates
+every 2 s and Caddy serves classic `php_server`, so saves show up immediately.
+Open <http://localhost:8000/admin>.
+
+This dev override is local-only: the published image is built from the
+`Dockerfile` by CI, and the standalone deployment uses `deploy/docker-compose.yml`.
 
 ## Required credentials & least privilege
 

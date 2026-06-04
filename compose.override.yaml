@@ -1,0 +1,50 @@
+# Local development overrides — automatically merged into compose.yaml by
+# `docker compose` (no -f needed). Bind-mounts your working tree into the
+# containers so PHP/Blade edits are live: opcache revalidates every 2s and Caddy
+# runs classic php_server (no worker cache), so a save shows up on the next
+# request without a rebuild.
+#
+# This is LOCAL-ONLY and does not affect what ships:
+#   - the published image is built from the Dockerfile by CI (buildx, no compose);
+#   - the standalone deployment uses deploy/docker-compose.yml.
+#
+# The `- /app/vendor` and `- /app/bootstrap/cache` anonymous volumes keep the
+# image's Linux-built, prod (--no-dev) vendor and package manifest instead of
+# shadowing them with the host's macOS, dev-deps versions (the host manifest
+# references dev-only packages like laravel/boost that aren't in the image).
+# After a `composer require`, run:
+#     docker compose exec app composer install
+# (or rebuild the image) to refresh vendor/.
+services:
+    app:
+        build:
+            context: .
+        environment:
+            APP_ENV: local
+            APP_DEBUG: 'true'
+        volumes:
+            - .:/app
+            - /app/vendor
+            - /app/bootstrap/cache
+
+    scheduler:
+        build:
+            context: .
+        environment:
+            APP_ENV: local
+            APP_DEBUG: 'true'
+        volumes:
+            - .:/app
+            - /app/vendor
+            - /app/bootstrap/cache
+
+    syslog:
+        build:
+            context: .
+        environment:
+            APP_ENV: local
+            APP_DEBUG: 'true'
+        volumes:
+            - .:/app
+            - /app/vendor
+            - /app/bootstrap/cache
