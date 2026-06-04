@@ -8,6 +8,7 @@ use App\Enums\TargetStatus;
 use App\Enums\TargetType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AlertResource;
+use App\Http\Resources\MonitoredAppResource;
 use App\Http\Resources\TargetResource;
 use App\Models\Alert;
 use App\Models\MonitoredApp;
@@ -112,25 +113,11 @@ class SummaryController extends Controller
         // ----------------------------------------------------------------
         // Monitored apps (satellite health) — hub computes staleness.
         // ----------------------------------------------------------------
-        $staleAfter = (int) config('watchtower.apps.stale_after', 15);
+        $staleAfter = config('watchtower.apps.stale_after', 15);
 
-        $apps = MonitoredApp::with('health')->orderBy('name')->get()->map(function (MonitoredApp $app) use ($staleAfter) {
-            $health = $app->health;
-            $receivedAt = $health?->received_at;
-            $stale = $receivedAt === null || $receivedAt->lt(CarbonImmutable::now()->subMinutes($staleAfter));
-
-            return [
-                'name' => $app->name,
-                'healthy' => $health !== null && $health->healthy && ! $stale,
-                'errorsLastHour' => (int) ($health->errors_last_hour ?? 0),
-                'queueDepth' => (int) ($health->queue_depth ?? 0),
-                'failedJobs24h' => (int) ($health->failed_jobs_24h ?? 0),
-                'mailSent24h' => (int) ($health->mail_sent_24h ?? 0),
-                'lastDeployAt' => $health?->last_deploy_at?->toIso8601String(),
-                'lastSeenAt' => $receivedAt?->toIso8601String(),
-                'stale' => $stale,
-            ];
-        })->values();
+        $apps = MonitoredApp::with('health')->orderBy('name')->get()
+            ->map(fn (MonitoredApp $app) => (new MonitoredAppResource($app))->withStaleAfter($staleAfter)->toArray(request()))
+            ->values();
 
         return response()->json([
             'targetsUp' => $targetsUp,

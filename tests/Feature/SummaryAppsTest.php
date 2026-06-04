@@ -22,6 +22,7 @@ class SummaryAppsTest extends TestCase
 
     public function test_fresh_app_appears_healthy_and_not_stale(): void
     {
+        config(['watchtower.apps.stale_after' => 15]);
         $app = MonitoredApp::factory()->create(['name' => 'Booking', 'slug' => 'booking']);
         AppHealth::factory()->for($app, 'app')->create([
             'healthy' => true,
@@ -64,5 +65,20 @@ class SummaryAppsTest extends TestCase
         $this->assertTrue($apps[0]['stale']);
         $this->assertFalse($apps[0]['healthy']);
         $this->assertNull($apps[0]['lastSeenAt']);
+    }
+
+    public function test_fresh_app_reporting_unhealthy_is_unhealthy(): void
+    {
+        config(['watchtower.apps.stale_after' => 15]);
+        $app = MonitoredApp::factory()->create(['slug' => 'booking']);
+        AppHealth::factory()->for($app, 'app')->create([
+            'healthy' => false,
+            'received_at' => now()->subMinute(),
+        ]);
+
+        $apps = $this->getJson('/api/v1/summary', $this->readHeaders())->assertOk()->json('apps');
+
+        $this->assertFalse($apps[0]['healthy']);
+        $this->assertFalse($apps[0]['stale']);
     }
 }
