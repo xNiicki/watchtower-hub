@@ -25,3 +25,8 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Filament published vendor assets — republished via `php artisan filament:assets`
+/public/css/filament
+/public/js/filament
+/public/fonts
