@@ -11,3 +11,5 @@ Artisan::command('inspire', function () {
 Schedule::command('collect:run')->everyMinute()->withoutOverlapping(5);
 
 Schedule::command('alerts:evaluate')->everyThirtySeconds()->withoutOverlapping(2);
+
+Schedule::command('app-events:sweep')->everyMinute()->withoutOverlapping(2);
