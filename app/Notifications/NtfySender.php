@@ -2,17 +2,20 @@
 
 namespace App\Notifications;
 
+use App\Services\Settings;
 use Illuminate\Support\Facades\Http;
 
 class NtfySender
 {
+    public function __construct(private readonly Settings $settings) {}
+
     /**
      * Whether ntfy is configured (base_url is set).
      * A listener with disabled() → true skips sending and logs an informational message.
      */
     public function enabled(): bool
     {
-        return ! empty(config('watchtower.ntfy.base_url'));
+        return ! empty($this->settings->ntfy()['base_url']);
     }
 
     /**
@@ -30,9 +33,11 @@ class NtfySender
      */
     public function send(string $title, string $message, string $priority, array $tags = []): void
     {
-        $baseUrl = rtrim((string) config('watchtower.ntfy.base_url'), '/');
-        $topic = config('watchtower.ntfy.topic', 'watchtower');
-        $token = config('watchtower.ntfy.token');
+        $config = $this->settings->ntfy();
+
+        $baseUrl = rtrim((string) $config['base_url'], '/');
+        $topic = $config['topic'] ?? 'watchtower';
+        $token = $config['token'];
 
         $headers = [
             'Title' => $title,

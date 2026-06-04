@@ -5,6 +5,7 @@ namespace App\Collectors;
 use App\Enums\TargetStatus;
 use App\Enums\TargetType;
 use App\Models\Target;
+use App\Services\Settings;
 use Carbon\Carbon;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
@@ -12,6 +13,13 @@ use Illuminate\Support\Facades\Log;
 
 class PbsCollector implements Collector
 {
+    private Settings $settings;
+
+    public function __construct(?Settings $settings = null)
+    {
+        $this->settings = $settings ?? app(Settings::class);
+    }
+
     public function key(): string
     {
         return 'pbs';
@@ -19,9 +27,11 @@ class PbsCollector implements Collector
 
     public function enabled(): bool
     {
-        return filled(config('watchtower.pbs.base_url'))
-            && filled(config('watchtower.pbs.token_id'))
-            && filled(config('watchtower.pbs.token_secret'));
+        $config = $this->settings->pbs();
+
+        return filled($config['base_url'])
+            && filled($config['token_id'])
+            && filled($config['token_secret']);
     }
 
     /**
@@ -57,10 +67,12 @@ class PbsCollector implements Collector
      */
     private function doCollect(): array
     {
-        $baseUrl = rtrim((string) config('watchtower.pbs.base_url'), '/');
-        $tokenId = (string) config('watchtower.pbs.token_id');
-        $tokenSecret = (string) config('watchtower.pbs.token_secret');
-        $verifyTls = (bool) config('watchtower.pbs.verify_tls', false);
+        $config = $this->settings->pbs();
+
+        $baseUrl = rtrim((string) $config['base_url'], '/');
+        $tokenId = (string) $config['token_id'];
+        $tokenSecret = (string) $config['token_secret'];
+        $verifyTls = $config['verify_tls'];
 
         // PBS uses a colon between token id and secret (unlike Proxmox VE which uses an equals sign).
         $request = Http::timeout(10)

@@ -5,10 +5,18 @@ namespace App\Collectors;
 use App\Enums\TargetStatus;
 use App\Enums\TargetType;
 use App\Models\Target;
+use App\Services\Settings;
 use Illuminate\Support\Facades\Http;
 
 class ProxmoxCollector implements Collector
 {
+    private Settings $settings;
+
+    public function __construct(?Settings $settings = null)
+    {
+        $this->settings = $settings ?? app(Settings::class);
+    }
+
     public function key(): string
     {
         return 'proxmox';
@@ -16,9 +24,11 @@ class ProxmoxCollector implements Collector
 
     public function enabled(): bool
     {
-        return filled(config('watchtower.proxmox.base_url'))
-            && filled(config('watchtower.proxmox.token_id'))
-            && filled(config('watchtower.proxmox.token_secret'));
+        $config = $this->settings->proxmox();
+
+        return filled($config['base_url'])
+            && filled($config['token_id'])
+            && filled($config['token_secret']);
     }
 
     /**
@@ -48,10 +58,12 @@ class ProxmoxCollector implements Collector
      */
     private function doCollect(): array
     {
-        $baseUrl = rtrim((string) config('watchtower.proxmox.base_url'), '/');
-        $tokenId = (string) config('watchtower.proxmox.token_id');
-        $tokenSecret = (string) config('watchtower.proxmox.token_secret');
-        $verifyTls = (bool) config('watchtower.proxmox.verify_tls', false);
+        $config = $this->settings->proxmox();
+
+        $baseUrl = rtrim((string) $config['base_url'], '/');
+        $tokenId = (string) $config['token_id'];
+        $tokenSecret = (string) $config['token_secret'];
+        $verifyTls = $config['verify_tls'];
 
         $request = Http::timeout(10)
             ->withHeader('Authorization', "PVEAPIToken={$tokenId}={$tokenSecret}");
