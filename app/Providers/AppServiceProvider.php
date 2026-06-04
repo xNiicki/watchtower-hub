@@ -6,7 +6,9 @@ use App\Collectors\HttpServiceCollector;
 use App\Collectors\PbsCollector;
 use App\Collectors\ProxmoxCollector;
 use App\Services\Settings;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,6 +32,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Behind a TLS-terminating reverse proxy (the documented deployment),
+        // the container receives plain HTTP, so Laravel would generate http:// URLs
+        // and the browser blocks them as mixed content on an https page. When the
+        // operator declares an https APP_URL, force https URL generation. Left off
+        // for plain-http LAN deploys (APP_URL stays http) so nothing breaks there.
+        if (Str::startsWith((string) config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
     }
 }

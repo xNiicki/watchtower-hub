@@ -15,6 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // The hub is deployed behind a TLS-terminating reverse proxy on a private
+        // network, so trust the forwarded headers (incl. X-Forwarded-Proto) to
+        // detect the original https scheme. Safe here: the container is only
+        // reachable via the proxy.
+        $middleware->trustProxies(at: '*');
+
         // Register Sanctum ability middleware aliases for use in routes.
         // CheckAbilities (abilities): ALL listed abilities must be present on the token.
         // CheckForAnyAbility (ability): ANY of the listed abilities must be present.
