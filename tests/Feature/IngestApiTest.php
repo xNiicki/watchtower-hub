@@ -37,6 +37,32 @@ class IngestApiTest extends TestCase
         $this->postJson('/api/ingest/health', $this->payload())->assertUnauthorized();
     }
 
+    public function test_token_not_bound_to_a_monitored_app_is_forbidden(): void
+    {
+        // A non-MonitoredApp tokenable that somehow carries the ingest ability
+        // must be rejected with 403, not 500 when resolving ->slug.
+        $user = User::factory()->create();
+        $token = $user->createToken('rogue', [TokenAbility::Ingest->value])->plainTextToken;
+
+        $this->postJson('/api/ingest/health', $this->payload(), [
+            'Authorization' => 'Bearer '.$token,
+        ])->assertForbidden();
+    }
+
+    public function test_healthy_flag_round_trips_through_upsert(): void
+    {
+        $app = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $token = $this->ingestToken($app);
+        $headers = ['Authorization' => 'Bearer '.$token];
+
+        $this->postJson('/api/ingest/health', $this->payload(['healthy' => false]), $headers)->assertNoContent();
+        $this->assertFalse($app->fresh()->health->healthy);
+
+        // Re-ingest healthy=true to confirm the upsert UPDATE branch flips it.
+        $this->postJson('/api/ingest/health', $this->payload(['healthy' => true]), $headers)->assertNoContent();
+        $this->assertTrue($app->fresh()->health->healthy);
+    }
+
     public function test_mobile_token_cannot_ingest(): void
     {
         $user = User::factory()->create();
