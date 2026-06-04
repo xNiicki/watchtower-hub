@@ -29,6 +29,7 @@ services:
         environment:
             APP_ENV: production
             APP_DEBUG: 'false'
+            DB_CONNECTION: pgsql
             DB_HOST: db
             DB_PORT: 5432
             DB_DATABASE: watchtower_hub
@@ -53,6 +54,7 @@ services:
         environment:
             APP_ENV: production
             APP_DEBUG: 'false'
+            DB_CONNECTION: pgsql
             DB_HOST: db
             DB_PORT: 5432
             DB_DATABASE: watchtower_hub
