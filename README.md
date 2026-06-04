@@ -32,40 +32,31 @@ Built with Laravel 12, PostgreSQL, and FrankenPHP, shipped as a Docker image.
 - **Scheduler:** runs `collect:run` every 60 s and `alerts:evaluate` every 30 s.
 - **Discovery:** Proxmox/PBS infra targets are auto-created on first collection. HTTP service checks are not auto-discoverable, so you add those yourself (see [Adding service checks](#adding-service-checks)).
 
-## Quick start (Docker)
+## Quick start (Docker — no clone, no .env)
+
+The published image and a single compose file are all you need:
 
 ```bash
-# 1. Configure
-cp .env.example .env
+# 1. Download the standalone compose file
+curl -O https://raw.githubusercontent.com/xNiicki/watchtower-hub/main/deploy/docker-compose.yml
 
-# 2. Set the app key
-php artisan key:generate --show     # paste the output into APP_KEY in .env
-
-# 3. Edit .env and fill in:
-#    - DB_PASSWORD
-#    - PROXMOX_BASE_URL / PROXMOX_TOKEN_ID / PROXMOX_TOKEN_SECRET
-#    - PBS_BASE_URL / PBS_TOKEN_ID / PBS_TOKEN_SECRET   (optional)
-#    - NTFY_BASE_URL / NTFY_TOPIC                        (optional)
-
-# 4. Launch (db, app, scheduler)
+# 2. Launch (db, app, scheduler). The database is internal and APP_KEY auto-generates.
 docker compose up -d
 
-# 5. Grab the mobile API token (printed once on first boot)
-docker compose logs app | grep -A2 "MOBILE API TOKEN"
+# 3. Set your admin password (one-time)
+docker compose exec app php artisan watchtower:admin
 ```
 
-On first boot the hub provisions an operator account and mints a single mobile API token, printing it **once** to the container logs. Copy that token into the iOS app to pair it. The hub never serves a web login — auth is token-only.
+Then open **`http://<host>:8000/admin`** and do everything in the UI:
 
-### Adding service checks
+1. Log in with the admin password you just set.
+2. **Settings** → enter your Proxmox / PBS / ntfy connection details and hit **Test connection**.
+3. **Tokens** → mint a mobile API token (shown once) and paste it into the iOS app to pair.
+4. Your Proxmox guests/storage **auto-discover**; add any HTTP service checks under **Targets**; tune **Rules** as you like.
 
-Infra (Proxmox/PBS) auto-discovers, but HTTP service checks don't. The example seeder ships a couple of disabled templates you can edit and enable:
+No `.env` editing required — all configuration lives in the admin UI (encrypted at rest).
 
-```bash
-docker compose exec app php artisan db:seed --class=FleetSeeder   # example service-check templates (disabled)
-docker compose exec app php artisan db:seed --class=RuleSeeder    # default alert rules
-```
-
-Edit `database/seeders/FleetSeeder.php` to point the example entries at your own URLs and set `enabled => true`, or add your own. See that file's docblock for details.
+> Developing from source instead? `cp .env.example .env`, set the values there, and use the repo's `compose.yaml` (which builds the image locally).
 
 ## Required credentials & least privilege
 

@@ -15,6 +15,7 @@ WORKDIR /app
 # Install PHP dependencies with the full app present (composer scripts need artisan).
 COPY . .
 RUN composer install --no-dev --optimize-autoloader --no-interaction \
+ && php artisan filament:assets \
  && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
  && chown -R www-data:www-data storage bootstrap/cache
 
