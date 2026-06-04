@@ -99,7 +99,7 @@ class Tokens extends Page implements HasActions, HasTable
                 ->action(function (array $data): void {
                     $operator = User::query()->oldest('id')->firstOrFail();
 
-                    $newToken = $operator->createToken($data['name'], TokenAbility::values());
+                    $newToken = $operator->createToken($data['name'], TokenAbility::mobile());
 
                     // Surface the plaintext token exactly once: a persistent, copyable
                     // notification plus a page callout. It is never persisted server-side.

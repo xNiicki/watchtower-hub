@@ -8,8 +8,10 @@ use App\Enums\TargetStatus;
 use App\Enums\TargetType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AlertResource;
+use App\Http\Resources\MonitoredAppResource;
 use App\Http\Resources\TargetResource;
 use App\Models\Alert;
+use App\Models\MonitoredApp;
 use App\Models\Target;
 use App\Services\LatestMetrics;
 use Carbon\CarbonImmutable;
@@ -108,6 +110,15 @@ class SummaryController extends Controller
             ->withMetrics($metricsByTarget[$t->id] ?? [])
             ->toArray(request()));
 
+        // ----------------------------------------------------------------
+        // Monitored apps (satellite health) — hub computes staleness.
+        // ----------------------------------------------------------------
+        $staleAfter = config('watchtower.apps.stale_after', 15);
+
+        $apps = MonitoredApp::with('health')->orderBy('name')->get()
+            ->map(fn (MonitoredApp $app) => (new MonitoredAppResource($app))->withStaleAfter($staleAfter)->toArray(request()))
+            ->values();
+
         return response()->json([
             'targetsUp' => $targetsUp,
             'targetsTotal' => $targetsTotal,
@@ -115,7 +126,7 @@ class SummaryController extends Controller
             'openAlerts' => AlertResource::collection($openAlerts),
             // Summary sub-collections are FLAT arrays; only top-level list/detail endpoints use Laravel's {data:...} envelope.
             'nodes' => $nodesData->values(),
-            'apps' => [],
+            'apps' => $apps,
             'lastBackupAt' => $lastBackupAt?->toIso8601String(),
             'lastBackupOk' => $lastBackupOk,
             'tankUsagePercent' => $tankUsagePercent,

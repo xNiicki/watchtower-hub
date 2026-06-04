@@ -31,7 +31,7 @@ class MintMobileToken extends Command
             return self::FAILURE;
         }
 
-        $token = $user->createToken($this->argument('name'), TokenAbility::values())->plainTextToken;
+        $token = $user->createToken($this->argument('name'), TokenAbility::mobile())->plainTextToken;
 
         $this->line($token);
 
