@@ -32,7 +32,7 @@ class AppEventRecorder
         }
 
         if ($severity === 'critical') {
-            $this->raiseAlert($app, $data, $event);
+            $this->raiseAlert($app, $data, $event, $severity);
         }
     }
 
@@ -85,7 +85,7 @@ class AppEventRecorder
     /**
      * @param  array<string, mixed>  $data
      */
-    private function raiseAlert(MonitoredApp $app, array $data, AppEvent $event): void
+    private function raiseAlert(MonitoredApp $app, array $data, AppEvent $event, string $severity): void
     {
         $ruleKey = "app.{$data['type']}:{$data['fingerprint']}";
         $now = CarbonImmutable::now();
@@ -98,26 +98,45 @@ class AppEventRecorder
         $message = "{$event->title}: {$event->message} ({$event->occurrences}× — {$event->file}:{$event->line})";
 
         if ($alert === null) {
+            // Fix [3]: derive tier from severity
+            $tier = $severity === 'critical' ? AlertTier::Critical : AlertTier::Warning;
+
             $alert = new Alert;
             $alert->target_id = null;
             $alert->app_id = $app->id;
             $alert->rule_key = $ruleKey;
             $alert->state = AlertState::Firing; // event already happened — skip pending/debounce
-            $alert->tier = AlertTier::Critical;
+            $alert->tier = $tier;
             $alert->title = "{$app->name}: {$event->title}";
             $alert->message = $message;
             $alert->fired_at = $now;
+            $alert->pending_since = null; // Fix [7]: explicit null for parity with AlertEngine
             $alert->save();
 
-            $this->page($alert, $ruleKey);
+            // Fix [2]: new alert always pages unconditionally; prime the cooldown key afterward
+            $this->pageNow($alert, $ruleKey);
 
             return;
         }
 
+        // Fix [4]: refresh title on recurrence
+        $alert->title = "{$app->name}: {$event->title}";
         $alert->message = $message;
         $alert->save();
 
+        // Existing alert: respect the cooldown gate
         $this->page($alert, $ruleKey);
+    }
+
+    /**
+     * Page unconditionally and prime the cooldown key (used for brand-new alerts).
+     */
+    private function pageNow(Alert $alert, string $ruleKey): void
+    {
+        $cooldown = (int) config('watchtower.apps.events.renotify_after', 60);
+
+        Cache::put("app-event-notified:{$ruleKey}", true, $cooldown * 60);
+        AlertFired::dispatch($alert);
     }
 
     /**

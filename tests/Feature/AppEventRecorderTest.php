@@ -70,4 +70,22 @@ class AppEventRecorderTest extends TestCase
         $this->assertSame(0, Alert::count());
         Event::assertNotDispatched(AlertFired::class);
     }
+
+    public function test_new_alert_after_resolution_pages_even_within_cooldown_window(): void
+    {
+        \Illuminate\Support\Facades\Event::fake([\App\Events\AlertFired::class]);
+        $app = \App\Models\MonitoredApp::factory()->create(['slug' => 'booking']);
+
+        // First occurrence creates + pages.
+        app(\App\Alerting\AppEventRecorder::class)->record($app, $this->payload(['fingerprint' => 'fpx']));
+
+        // Resolve the alert (simulating the quiet-after sweep), leaving the cooldown cache key live.
+        \App\Models\Alert::where('app_id', $app->id)->update(['state' => \App\Enums\AlertState::Resolved->value]);
+
+        // A new occurrence of the SAME fingerprint must create a fresh firing alert AND page again.
+        app(\App\Alerting\AppEventRecorder::class)->record($app, $this->payload(['fingerprint' => 'fpx']));
+
+        $this->assertSame(2, \App\Models\Alert::where('app_id', $app->id)->count());
+        \Illuminate\Support\Facades\Event::assertDispatchedTimes(\App\Events\AlertFired::class, 2);
+    }
 }
