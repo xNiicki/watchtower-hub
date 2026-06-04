@@ -9,6 +9,7 @@ use App\Enums\TokenAbility;
 use App\Models\Alert;
 use App\Models\Check;
 use App\Models\Metric;
+use App\Models\SyslogEntry;
 use App\Models\Target;
 use App\Models\User;
 use Carbon\Carbon;
@@ -634,7 +635,7 @@ class MobileApiTest extends TestCase
     // GET /logs
     // =========================================================================
 
-    public function test_logs_returns_empty_array(): void
+    public function test_logs_returns_empty_array_when_no_entries(): void
     {
         $user = User::factory()->create();
         $token = $this->readToken($user);
@@ -651,8 +652,216 @@ class MobileApiTest extends TestCase
         $token = $this->readToken($user);
 
         $this->withHeader('Authorization', 'Bearer '.$token)
-            ->getJson('/api/v1/logs?host=pve-01&severity=error&search=oom&limit=50')
+            ->getJson('/api/v1/logs?host=pve-01&severity=err&search=oom&limit=50')
             ->assertOk()
             ->assertExactJson([]);
+    }
+
+    public function test_logs_returns_flat_array_not_wrapped(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        SyslogEntry::factory()->create([
+            'host' => 'pve-01',
+            'severity' => 'err',
+            'message' => 'disk failing',
+            'logged_at' => CarbonImmutable::parse('2026-06-03 10:00:00'),
+            'received_at' => CarbonImmutable::parse('2026-06-03 10:00:00'),
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs')
+            ->assertOk();
+
+        // Flat array — no 'data' wrapper.
+        $body = $response->json();
+        $this->assertArrayNotHasKey('data', $body);
+        $this->assertIsArray($body);
+        $this->assertCount(1, $body);
+    }
+
+    public function test_logs_entry_matches_log_entry_dto_shape(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        $loggedAt = CarbonImmutable::parse('2026-06-03 10:00:00');
+        $entry = SyslogEntry::factory()->create([
+            'host' => 'pve-01',
+            'severity' => 'err',
+            'message' => 'kernel panic',
+            'logged_at' => $loggedAt,
+            'received_at' => $loggedAt,
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs')
+            ->assertOk()
+            ->assertJsonStructure([['id', 'host', 'severity', 'message', 'loggedAt']]);
+
+        $first = $response->json('0');
+        $this->assertSame((string) $entry->id, $first['id']);
+        $this->assertIsString($first['id']);
+        $this->assertSame('pve-01', $first['host']);
+        $this->assertSame('err', $first['severity']);
+        $this->assertSame('kernel panic', $first['message']);
+        $this->assertSame($loggedAt->toIso8601String(), $first['loggedAt']);
+    }
+
+    public function test_logs_are_ordered_newest_first(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        $old = SyslogEntry::factory()->create([
+            'message' => 'old',
+            'logged_at' => CarbonImmutable::parse('2026-06-01 10:00:00'),
+            'received_at' => CarbonImmutable::parse('2026-06-01 10:00:00'),
+        ]);
+        $new = SyslogEntry::factory()->create([
+            'message' => 'new',
+            'logged_at' => CarbonImmutable::parse('2026-06-03 10:00:00'),
+            'received_at' => CarbonImmutable::parse('2026-06-03 10:00:00'),
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs')
+            ->assertOk();
+
+        $ids = collect($response->json())->pluck('id')->all();
+        $this->assertSame([(string) $new->id, (string) $old->id], $ids);
+    }
+
+    public function test_logs_host_filter_is_exact_match(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        SyslogEntry::factory()->create(['host' => 'pve-01', 'message' => 'a']);
+        SyslogEntry::factory()->create(['host' => 'pve-02', 'message' => 'b']);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs?host=pve-01')
+            ->assertOk();
+
+        $hosts = collect($response->json())->pluck('host')->unique()->all();
+        $this->assertSame(['pve-01'], $hosts);
+    }
+
+    public function test_logs_severity_filter_is_exact_match(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        SyslogEntry::factory()->create(['severity' => 'err', 'message' => 'a']);
+        SyslogEntry::factory()->create(['severity' => 'info', 'message' => 'b']);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs?severity=err')
+            ->assertOk();
+
+        $severities = collect($response->json())->pluck('severity')->unique()->all();
+        $this->assertSame(['err'], $severities);
+    }
+
+    public function test_logs_search_is_case_insensitive_substring(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        SyslogEntry::factory()->create(['message' => 'Out Of Memory killer invoked']);
+        SyslogEntry::factory()->create(['message' => 'service started cleanly']);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs?search=out of memory')
+            ->assertOk();
+
+        $messages = collect($response->json())->pluck('message')->all();
+        $this->assertSame(['Out Of Memory killer invoked'], $messages);
+    }
+
+    public function test_logs_combined_filters_are_anded(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        // Matches all three filters.
+        $match = SyslogEntry::factory()->create([
+            'host' => 'pve-01', 'severity' => 'err', 'message' => 'oom killer',
+        ]);
+        // Right host+severity, wrong message.
+        SyslogEntry::factory()->create([
+            'host' => 'pve-01', 'severity' => 'err', 'message' => 'all good',
+        ]);
+        // Right message, wrong host.
+        SyslogEntry::factory()->create([
+            'host' => 'pve-02', 'severity' => 'err', 'message' => 'oom killer',
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs?host=pve-01&severity=err&search=oom')
+            ->assertOk();
+
+        $ids = collect($response->json())->pluck('id')->all();
+        $this->assertSame([(string) $match->id], $ids);
+    }
+
+    public function test_logs_limit_defaults_to_200(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        SyslogEntry::factory()->count(205)->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs')
+            ->assertOk();
+
+        $this->assertCount(200, $response->json());
+    }
+
+    public function test_logs_limit_is_clamped_to_max_1000(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        SyslogEntry::factory()->count(3)->create();
+
+        // Request a limit above the cap — must not error, returns what exists.
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs?limit=5000')
+            ->assertOk();
+
+        $this->assertCount(3, $response->json());
+    }
+
+    public function test_logs_respects_custom_limit(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->readToken($user);
+
+        SyslogEntry::factory()->count(10)->create();
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs?limit=4')
+            ->assertOk();
+
+        $this->assertCount(4, $response->json());
+    }
+
+    public function test_logs_requires_authentication(): void
+    {
+        $this->getJson('/api/v1/logs')->assertUnauthorized();
+    }
+
+    public function test_logs_requires_read_ability(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->ackToken($user);
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/logs')
+            ->assertForbidden();
     }
 }

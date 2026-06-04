@@ -70,6 +70,29 @@ services:
             - storage:/app/storage
         restart: unless-stopped
 
+    syslog:
+        image: ghcr.io/xniicki/watchtower-hub:latest
+        environment:
+            APP_ENV: production
+            APP_DEBUG: 'false'
+            DB_CONNECTION: pgsql
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_DATABASE: watchtower_hub
+            DB_USERNAME: watchtower
+            DB_PASSWORD: watchtower-internal
+        depends_on:
+            app:
+                condition: service_healthy
+        ports:
+            - '514:514/udp'
+        # Load the auto-generated APP_KEY (written by the app to the shared storage
+        # volume on first boot), then run the UDP syslog listener.
+        entrypoint: ['sh', '-c', 'export APP_KEY=$$(cat /app/storage/app_key 2>/dev/null); exec php artisan syslog:listen']
+        volumes:
+            - storage:/app/storage
+        restart: unless-stopped
+
 volumes:
     db-data:
     storage:

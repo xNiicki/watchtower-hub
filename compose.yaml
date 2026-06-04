@@ -58,5 +58,23 @@ services:
         entrypoint: ['php', 'artisan', 'schedule:work']
         restart: unless-stopped
 
+    syslog:
+        image: watchtower-hub:local
+        env_file: .env
+        environment:
+            DB_HOST: db
+            DB_PORT: 5432
+            APP_ENV: production
+            APP_DEBUG: 'false'
+        # Wait until the app is healthy (= migrations done) before binding the socket.
+        depends_on:
+            app:
+                condition: service_healthy
+        # Override the image entrypoint: this container only runs the UDP syslog listener.
+        entrypoint: ['php', 'artisan', 'syslog:listen']
+        ports:
+            - '514:514/udp'
+        restart: unless-stopped
+
 volumes:
     watchtower-hub-db-data:

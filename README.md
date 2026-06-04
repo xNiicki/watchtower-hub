@@ -74,9 +74,26 @@ Set `*_VERIFY_TLS=true` once your Proxmox/PBS endpoints present trusted certific
 
 Watchtower Hub pairs with the **Watchtower iOS app** (a NativePHP app, maintained in a separate repository). The app consumes the hub's read-only `/api/v1` endpoints using the mobile token described above and can acknowledge alerts.
 
+## Send logs to the hub
+
+The hub can ingest syslog over UDP so your machines' logs show up in the app's **Logs** tab (searchable by host, severity, and message). This is **optional** — infra metrics and alerts work fine without it.
+
+For each machine you want to monitor, forward its syslog over **UDP port 514** to the hub. With rsyslog, create `/etc/rsyslog.d/90-watchtower.conf`:
+
+```
+*.* @<HUB_HOST>:514
+```
+
+(The single `@` means UDP — a double `@@` would mean TCP, which the hub does not listen for.) Then restart rsyslog:
+
+```bash
+systemctl restart rsyslog
+```
+
+Replace `<HUB_HOST>` with the hub's hostname or IP. **UDP 514 must be reachable from the sender to the hub** (open it in any firewall/security group between them). Logs then appear in the app's Logs tab and are searchable.
+
 ## Roadmap (not yet implemented)
 
-- Syslog ingestion / log-based checks.
 - An app-telemetry satellite for monitoring your own deployed apps.
 
 These are planned but **not** part of the current release — the sections above describe only what is actually built.
