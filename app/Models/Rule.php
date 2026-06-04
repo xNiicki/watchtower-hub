@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AlertTier;
 use Database\Factories\RuleFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property AlertTier $tier
  * @property bool $enabled
  */
+#[Fillable(['key', 'condition_type', 'params', 'duration_seconds', 'tier', 'enabled'])]
 class Rule extends Model
 {
     /** @use HasFactory<RuleFactory> */

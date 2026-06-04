@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TargetType;
 use Database\Factories\TargetFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property array<string, mixed>|null $check_config
  * @property bool $enabled
  */
+#[Fillable(['type', 'name', 'external_id', 'node', 'check_config', 'enabled'])]
 class Target extends Model
 {
     /** @use HasFactory<TargetFactory> */
