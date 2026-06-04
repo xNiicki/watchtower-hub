@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int|null $target_id
+ * @property int|null $app_id
  * @property string $rule_key
  * @property AlertState $state
  * @property AlertTier $tier
@@ -43,5 +44,10 @@ class Alert extends Model
     public function target(): BelongsTo
     {
         return $this->belongsTo(Target::class);
+    }
+
+    public function app(): BelongsTo
+    {
+        return $this->belongsTo(MonitoredApp::class, 'app_id');
     }
 }
