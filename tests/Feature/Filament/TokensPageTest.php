@@ -47,7 +47,7 @@ class TokensPageTest extends TestCase
 
         $this->assertSame($operator->getMorphClass(), $token->tokenable_type);
         $this->assertSame((int) $operator->getKey(), (int) $token->tokenable_id);
-        $this->assertEqualsCanonicalizing(TokenAbility::values(), $token->abilities);
+        $this->assertEqualsCanonicalizing(TokenAbility::mobile(), $token->abilities);
 
         // Plaintext is surfaced exactly once via the component property.
         $plain = $component->get('plainTextToken');

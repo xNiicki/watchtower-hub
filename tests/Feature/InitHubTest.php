@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\TokenAbility;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
 class InitHubTest extends TestCase
@@ -43,5 +45,20 @@ class InitHubTest extends TestCase
         $this->artisan('watchtower:init')->assertSuccessful();
 
         $this->assertDatabaseHas('users', ['email' => 'nick@example.com']);
+    }
+
+    /**
+     * Regression guard: the init token must never carry the ingest ability.
+     * Phones may not push telemetry — only the satellite ingest endpoint should.
+     */
+    public function test_init_token_has_read_but_not_ingest(): void
+    {
+        $this->artisan('watchtower:init')->assertSuccessful();
+
+        $pat = PersonalAccessToken::query()->where('name', 'mobile')->firstOrFail();
+
+        $this->assertTrue($pat->can(TokenAbility::Read->value), 'init token must have the read ability');
+        $this->assertFalse($pat->can(TokenAbility::Ingest->value), 'init token must NOT have the ingest ability — phones cannot push telemetry');
+        $this->assertEqualsCanonicalizing(TokenAbility::mobile(), $pat->abilities);
     }
 }

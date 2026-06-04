@@ -36,7 +36,7 @@ class InitHub extends Command
             return self::SUCCESS;
         }
 
-        $token = $user->createToken(self::MOBILE_TOKEN_NAME, TokenAbility::values())->plainTextToken;
+        $token = $user->createToken(self::MOBILE_TOKEN_NAME, TokenAbility::mobile())->plainTextToken;
 
         $this->newLine();
         $this->line('========================================================');
