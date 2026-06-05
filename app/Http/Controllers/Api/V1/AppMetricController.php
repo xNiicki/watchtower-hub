@@ -28,22 +28,27 @@ class AppMetricController extends Controller
             ->orderBy('bucket_at')
             ->get();
 
+        // Build the series and the latest-per-key map in a single pass. The
+        // query is ordered by bucket_at ascending, so the last value seen for
+        // each key is the latest.
         $series = [];
+        $latest = [];
         foreach ($metrics as $m) {
             $series[$m->key][] = ['at' => $m->bucket_at->toIso8601String(), 'value' => $m->value];
+            $latest[$m->key] = $m->value;
         }
 
-        $latestOf = fn (string $key) => $metrics->where('key', $key)->last()?->value ?? 0;
+        $latestOf = fn (string $key) => $latest[$key] ?? 0;
 
         return response()->json([
             'range' => $range,
             'series' => (object) $series,
             'latest' => [
-                'requestsPerMin'  => (int) $latestOf('requests'),
-                'latencyAvgMs'    => (int) round($latestOf('request_latency_avg_ms')),
-                'latencyMaxMs'    => (int) round($latestOf('request_latency_max_ms')),
-                'slowRequests'    => (int) $latestOf('slow_requests'),
-                'slowQueries'     => (int) $latestOf('slow_queries'),
+                'requestsPerMin' => (int) $latestOf('requests'),
+                'latencyAvgMs' => (int) round($latestOf('request_latency_avg_ms')),
+                'latencyMaxMs' => (int) round($latestOf('request_latency_max_ms')),
+                'slowRequests' => (int) $latestOf('slow_requests'),
+                'slowQueries' => (int) $latestOf('slow_queries'),
             ],
         ]);
     }

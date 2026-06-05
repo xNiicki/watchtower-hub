@@ -35,14 +35,22 @@ class MetricController extends Controller
             abort(403, 'Payload slug does not match the authenticated app.');
         }
 
-        $rows = array_map(fn (array $p) => [
-            'app_id' => $app->id,
-            'key' => $p['key'],
-            'value' => (float) $p['value'],
-            'bucket_at' => CarbonImmutable::parse($p['bucketAt'])->toDateTimeString(),
-        ], $data['points']);
+        // Normalize each bucket to the start of its minute and dedupe by
+        // (key, bucket_at), keeping the last occurrence. This preserves
+        // idempotency for non-minute-aligned timestamps and avoids Postgres
+        // erroring on a duplicate ON CONFLICT target within a single upsert.
+        $rows = [];
+        foreach ($data['points'] as $p) {
+            $bucketAt = CarbonImmutable::parse($p['bucketAt'])->startOfMinute()->toDateTimeString();
+            $rows[$p['key'].'|'.$bucketAt] = [
+                'app_id' => $app->id,
+                'key' => $p['key'],
+                'value' => (float) $p['value'],
+                'bucket_at' => $bucketAt,
+            ];
+        }
 
-        AppMetric::upsert($rows, uniqueBy: ['app_id', 'key', 'bucket_at'], update: ['value']);
+        AppMetric::upsert(array_values($rows), uniqueBy: ['app_id', 'key', 'bucket_at'], update: ['value']);
 
         return response()->noContent();
     }

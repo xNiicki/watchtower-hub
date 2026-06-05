@@ -1,12 +1,16 @@
 <?php
+
 namespace Tests\Feature;
+
 use App\Models\AppMetric;
 use App\Models\MonitoredApp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+
 class PruneAppMetricsTest extends TestCase
 {
     use RefreshDatabase;
+
     public function test_prunes_metrics_older_than_retention(): void
     {
         config(['watchtower.apps.metrics.retention_days' => 30]);

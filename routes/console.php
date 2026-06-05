@@ -12,4 +12,4 @@ Schedule::command('collect:run')->everyMinute()->withoutOverlapping(5);
 
 Schedule::command('alerts:evaluate')->everyThirtySeconds()->withoutOverlapping(2);
 
-Schedule::command('app-metrics:prune')->daily();
+Schedule::command('app-metrics:prune')->daily()->withoutOverlapping(10);

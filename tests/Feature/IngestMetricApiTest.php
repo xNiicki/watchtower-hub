@@ -56,6 +56,29 @@ class IngestMetricApiTest extends TestCase
         $this->assertSame(999.0, (float) AppMetric::where('app_id', $a->id)->where('key', 'requests')->first()->value);
     }
 
+    public function test_non_aligned_timestamp_normalized_to_minute_bucket(): void
+    {
+        $a = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $this->postJson('/api/ingest/metrics', $this->payload(['points' => [
+            ['key' => 'requests', 'value' => 5, 'bucketAt' => '2026-06-05T05:00:30+00:00'],
+        ]]), ['Authorization' => 'Bearer '.$this->token($a)])->assertNoContent();
+
+        $metric = AppMetric::where('app_id', $a->id)->where('key', 'requests')->sole();
+        $this->assertSame('2026-06-05 05:00:00', $metric->bucket_at->utc()->toDateTimeString());
+    }
+
+    public function test_duplicate_points_in_payload_dedupe_last_wins(): void
+    {
+        $a = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $this->postJson('/api/ingest/metrics', $this->payload(['points' => [
+            ['key' => 'requests', 'value' => 1, 'bucketAt' => '2026-06-05T05:00:00+00:00'],
+            ['key' => 'requests', 'value' => 2, 'bucketAt' => '2026-06-05T05:00:30+00:00'],
+        ]]), ['Authorization' => 'Bearer '.$this->token($a)])->assertNoContent();
+
+        $metric = AppMetric::where('app_id', $a->id)->where('key', 'requests')->sole();
+        $this->assertSame(2.0, (float) $metric->value);
+    }
+
     public function test_slug_mismatch_forbidden(): void
     {
         $a = MonitoredApp::factory()->create(['slug' => 'booking']);
