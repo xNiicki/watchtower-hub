@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Ingest\EventController;
 use App\Http\Controllers\Api\Ingest\HealthController;
 use App\Http\Controllers\Api\Ingest\MetricController;
 use App\Http\Controllers\Api\V1\AlertController;
+use App\Http\Controllers\Api\V1\AppEventController;
 use App\Http\Controllers\Api\V1\AppMetricController;
 use App\Http\Controllers\Api\V1\LogController;
 use App\Http\Controllers\Api\V1\SummaryController;
@@ -31,6 +32,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/alerts', [AlertController::class, 'index']);
             Route::get('/summary', SummaryController::class);
             Route::get('/logs', LogController::class);
+            Route::get('/apps/{slug}/events', [AppEventController::class, 'index']);
             Route::get('/apps/{slug}/metrics', [AppMetricController::class, 'index']);
         });
 
@@ -45,5 +47,6 @@ Route::prefix('v1')->group(function () {
 // Future schema changes are versioned via the payload `schemaVersion` field instead.
 Route::prefix('ingest')->middleware(['auth:sanctum', 'abilities:'.TokenAbility::Ingest->value])->group(function () {
     Route::post('/health', HealthController::class);
+    Route::post('/event', EventController::class);
     Route::post('/metrics', MetricController::class);
 });
