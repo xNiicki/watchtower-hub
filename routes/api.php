@@ -2,6 +2,7 @@
 
 use App\Enums\TokenAbility;
 use App\Http\Controllers\Api\Ingest\HealthController;
+use App\Http\Controllers\Api\Ingest\MetricController;
 use App\Http\Controllers\Api\V1\AlertController;
 use App\Http\Controllers\Api\V1\LogController;
 use App\Http\Controllers\Api\V1\SummaryController;
@@ -41,4 +42,5 @@ Route::prefix('v1')->group(function () {
 // Future schema changes are versioned via the payload `schemaVersion` field instead.
 Route::prefix('ingest')->middleware(['auth:sanctum', 'abilities:'.TokenAbility::Ingest->value])->group(function () {
     Route::post('/health', HealthController::class);
+    Route::post('/metrics', MetricController::class);
 });
