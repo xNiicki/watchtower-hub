@@ -105,4 +105,15 @@ class AppEventApiTest extends TestCase
         $event = AppEvent::factory()->for($b, 'app')->create();
         $this->getJson("/api/v1/apps/{$a->slug}/events/{$event->id}", $this->readHeaders())->assertNotFound();
     }
+
+    public function test_show_null_context_returns_empty_array(): void
+    {
+        $app = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $event = AppEvent::factory()->for($app, 'app')->create(['context' => null]);
+
+        $data = $this->getJson("/api/v1/apps/{$app->slug}/events/{$event->id}", $this->readHeaders())
+            ->assertOk()->json();
+
+        $this->assertSame([], $data['context']);
+    }
 }
