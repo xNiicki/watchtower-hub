@@ -11,7 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * JSON representation of a MonitoredApp (with its latest health) for the mobile
  * API's summary.apps[]. Shape matches the iOS AppHealth DTO (camelCase):
  *   name, healthy, errorsLastHour, queueDepth, failedJobs24h, mailSent24h,
- *   lastDeployAt, lastSeenAt, stale
+ *   lastDeployAt, lastSeenAt, stale, bufferDepth, lastShipError, deliveryDegraded
  *
  * Staleness is computed by the hub: an app is stale when it has no health
  * snapshot, or its received_at is older than the configured threshold. A stale
@@ -47,6 +47,9 @@ class MonitoredAppResource extends JsonResource
             'lastDeployAt' => $health?->last_deploy_at?->toIso8601String(),
             'lastSeenAt' => $receivedAt?->toIso8601String(),
             'stale' => $stale,
+            'bufferDepth' => (int) ($health->buffer_depth ?? 0),
+            'lastShipError' => $health?->last_ship_error,
+            'deliveryDegraded' => (int) ($health->buffer_depth ?? 0) > 0,
         ];
     }
 }
