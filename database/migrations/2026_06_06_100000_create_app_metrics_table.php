@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->double('value');
             $table->timestampTz('bucket_at');
             $table->unique(['app_id', 'key', 'bucket_at']);
-            $table->index(['app_id', 'key', 'bucket_at']);
+            $table->index(['app_id', 'bucket_at']);
         });
     }
 
