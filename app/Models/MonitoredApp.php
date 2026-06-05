@@ -6,6 +6,7 @@ use Database\Factories\MonitoredAppFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -31,5 +32,10 @@ class MonitoredApp extends Model
     public function health(): HasOne
     {
         return $this->hasOne(AppHealth::class, 'app_id');
+    }
+
+    public function metrics(): HasMany
+    {
+        return $this->hasMany(AppMetric::class, 'app_id');
     }
 }
