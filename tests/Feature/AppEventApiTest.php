@@ -58,4 +58,51 @@ class AppEventApiTest extends TestCase
     {
         $this->getJson('/api/v1/apps/nope/events', $this->readHeaders())->assertNotFound();
     }
+
+    public function test_show_returns_full_event_with_trace_and_context(): void
+    {
+        $app = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $event = AppEvent::factory()->for($app, 'app')->create([
+            'type' => 'exception',
+            'severity' => 'critical',
+            'title' => 'TypeError',
+            'message' => 'Cannot read property x',
+            'exception_class' => 'TypeError',
+            'file' => 'app/Services/Foo.php',
+            'line' => 42,
+            'trace' => '#0 app/Services/Foo.php(42): Foo->load()',
+            'context' => ['queue' => 'default', 'connection' => 'redis'],
+        ]);
+
+        $data = $this->getJson("/api/v1/apps/{$app->slug}/events/{$event->id}", $this->readHeaders())
+            ->assertOk()->json();
+
+        $this->assertSame((string) $event->id, $data['id']);
+        $this->assertSame('app/Services/Foo.php', $data['file']);
+        $this->assertSame(42, $data['line']);
+        $this->assertSame('TypeError', $data['exceptionClass']);
+        $this->assertStringContainsString('Foo->load()', $data['trace']);
+        $this->assertSame(['queue' => 'default', 'connection' => 'redis'], $data['context']);
+    }
+
+    public function test_show_requires_read_token(): void
+    {
+        $app = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $event = AppEvent::factory()->for($app, 'app')->create();
+        $this->getJson("/api/v1/apps/{$app->slug}/events/{$event->id}")->assertUnauthorized();
+    }
+
+    public function test_show_unknown_id_is_404(): void
+    {
+        $app = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $this->getJson("/api/v1/apps/{$app->slug}/events/999999", $this->readHeaders())->assertNotFound();
+    }
+
+    public function test_show_event_from_another_app_is_404(): void
+    {
+        $a = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $b = MonitoredApp::factory()->create(['slug' => 'other']);
+        $event = AppEvent::factory()->for($b, 'app')->create();
+        $this->getJson("/api/v1/apps/{$a->slug}/events/{$event->id}", $this->readHeaders())->assertNotFound();
+    }
 }

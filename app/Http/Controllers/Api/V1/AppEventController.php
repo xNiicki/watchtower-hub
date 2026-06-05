@@ -45,4 +45,35 @@ class AppEventController extends Controller
             ])->all()
         );
     }
+
+    /**
+     * GET /api/v1/apps/{slug}/events/{id}
+     *
+     * One grouped event with the full detail the list omits — trace + context —
+     * for the app's Nightwatch detail screen (D4). Scoped to the app so one
+     * app's token/slug can never read another app's event.
+     */
+    public function show(string $slug, string $id): JsonResponse
+    {
+        $app = MonitoredApp::where('slug', $slug)->firstOrFail();
+
+        /** @var AppEvent $event */
+        $event = $app->events()->findOrFail($id);
+
+        return response()->json([
+            'id' => (string) $event->id,
+            'type' => $event->type,
+            'severity' => $event->severity,
+            'title' => $event->title,
+            'message' => $event->message,
+            'occurrences' => $event->occurrences,
+            'firstSeenAt' => $event->first_seen_at->toIso8601String(),
+            'lastSeenAt' => $event->last_seen_at->toIso8601String(),
+            'exceptionClass' => $event->exception_class,
+            'file' => $event->file,
+            'line' => $event->line,
+            'trace' => $event->trace,
+            'context' => $event->context ?? [],
+        ]);
+    }
 }

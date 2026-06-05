@@ -33,6 +33,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/summary', SummaryController::class);
             Route::get('/logs', LogController::class);
             Route::get('/apps/{slug}/events', [AppEventController::class, 'index']);
+            Route::get('/apps/{slug}/events/{id}', [AppEventController::class, 'show']);
             Route::get('/apps/{slug}/metrics', [AppMetricController::class, 'index']);
         });
 
