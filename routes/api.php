@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\TokenAbility;
+use App\Http\Controllers\Api\Ingest\EventController;
 use App\Http\Controllers\Api\Ingest\HealthController;
 use App\Http\Controllers\Api\Ingest\MetricController;
 use App\Http\Controllers\Api\V1\AlertController;

@@ -38,6 +38,7 @@ class MonitoredAppResource extends JsonResource
 
         return [
             'name' => $this->name,
+            'slug' => $this->slug,
             'healthy' => $health !== null && $health->healthy && ! $stale,
             'errorsLastHour' => (int) ($health->errors_last_hour ?? 0),
             'queueDepth' => (int) ($health->queue_depth ?? 0),

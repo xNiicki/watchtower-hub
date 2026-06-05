@@ -7,8 +7,7 @@ return [
     ],
 
     'apps' => [
-        // Minutes since the last received snapshot after which an app is "stale"
-        // (shown unhealthy). Defaults to 3x the satellite's default 5-min interval.
+        // Minutes since the last received snapshot after which an app is "stale".
         'stale_after' => (int) env('APPS_STALE_AFTER_MINUTES', 15),
 
         'metrics' => [
