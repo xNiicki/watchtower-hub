@@ -35,6 +35,7 @@ class SummaryAppsTest extends TestCase
         $apps = $response->json('apps');
         $this->assertCount(1, $apps);
         $this->assertSame('Booking', $apps[0]['name']);
+        $this->assertSame('booking', $apps[0]['slug']);
         $this->assertTrue($apps[0]['healthy']);
         $this->assertFalse($apps[0]['stale']);
         $this->assertSame(4, $apps[0]['queueDepth']);
