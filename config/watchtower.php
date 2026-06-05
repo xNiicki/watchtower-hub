@@ -10,6 +10,11 @@ return [
         // Minutes since the last received snapshot after which an app is "stale".
         'stale_after' => (int) env('APPS_STALE_AFTER_MINUTES', 15),
 
+        'delivery' => [
+            // Minutes a delivery backlog must persist before a (quiet) degraded alert fires.
+            'degraded_after' => (int) env('APP_DELIVERY_DEGRADED_AFTER_MINUTES', 5),
+        ],
+
         'events' => [
             // Per-type alert tier. 'critical' pages via ntfy; 'warning' is recorded but quiet.
             'severity' => [
