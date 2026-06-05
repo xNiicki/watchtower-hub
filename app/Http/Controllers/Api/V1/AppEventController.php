@@ -25,6 +25,7 @@ class AppEventController extends Controller
         $limit = min(max((int) $request->query('limit', 100), 1), 1000);
 
         $events = AppEvent::query()
+            ->select(['id', 'type', 'severity', 'title', 'message', 'occurrences', 'first_seen_at', 'last_seen_at'])
             ->where('app_id', $app->id)
             ->when(is_string($search) && $search !== '', fn ($q) => $q->where('message', 'ilike', '%'.$search.'%'))
             ->orderByDesc('last_seen_at')

@@ -51,6 +51,34 @@ class IngestEventApiTest extends TestCase
         $this->assertSame(5, AppEvent::where('app_id', $app->id)->firstOrFail()->occurrences);
     }
 
+    public function test_first_and_last_seen_use_occurred_at(): void
+    {
+        $app = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $occurredAt = now()->subMinutes(30)->startOfSecond();
+
+        $this->postJson('/api/ingest/event', $this->payload(['occurredAt' => $occurredAt->toIso8601String()]), [
+            'Authorization' => 'Bearer '.$this->token($app),
+        ])->assertNoContent();
+
+        $event = AppEvent::where('app_id', $app->id)->firstOrFail();
+        $this->assertTrue($event->first_seen_at->equalTo($occurredAt), 'first_seen_at should equal occurredAt');
+        $this->assertTrue($event->last_seen_at->equalTo($occurredAt), 'last_seen_at should equal occurredAt');
+    }
+
+    public function test_out_of_order_event_does_not_move_last_seen_backward(): void
+    {
+        $app = MonitoredApp::factory()->create(['slug' => 'booking']);
+        $headers = ['Authorization' => 'Bearer '.$this->token($app)];
+        $newer = now()->subMinutes(5)->startOfSecond();
+        $older = now()->subMinutes(30)->startOfSecond();
+
+        $this->postJson('/api/ingest/event', $this->payload(['occurredAt' => $newer->toIso8601String()]), $headers)->assertNoContent();
+        $this->postJson('/api/ingest/event', $this->payload(['occurredAt' => $older->toIso8601String()]), $headers)->assertNoContent();
+
+        $event = AppEvent::where('app_id', $app->id)->firstOrFail();
+        $this->assertTrue($event->last_seen_at->equalTo($newer), 'last_seen_at must not move backward for out-of-order arrivals');
+    }
+
     public function test_slug_mismatch_is_forbidden(): void
     {
         $app = MonitoredApp::factory()->create(['slug' => 'booking']);

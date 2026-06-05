@@ -23,7 +23,7 @@ class SweepAppEvents extends Command
         $firing = Alert::where('state', AlertState::Firing->value)
             ->whereNotNull('app_id')
             ->where('rule_key', 'like', 'app.%')
-            ->get();
+            ->cursor();
 
         $resolved = 0;
 

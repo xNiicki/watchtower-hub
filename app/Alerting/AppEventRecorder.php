@@ -54,6 +54,7 @@ class AppEventRecorder
                 ->first();
 
             $now = CarbonImmutable::now();
+            $occurredAt = isset($data['occurredAt']) ? CarbonImmutable::parse($data['occurredAt']) : $now;
             $incoming = max(1, (int) ($data['occurrences'] ?? 1));
 
             if ($event === null) {
@@ -61,7 +62,7 @@ class AppEventRecorder
                 $event->app_id = $app->id;
                 $event->fingerprint = (string) $data['fingerprint'];
                 $event->occurrences = 0;
-                $event->first_seen_at = $now;
+                $event->first_seen_at = $occurredAt;
             }
 
             $event->type = (string) $data['type'];
@@ -74,7 +75,12 @@ class AppEventRecorder
             $event->trace = $data['trace'] ?? null;
             $event->context = $data['context'] ?? null;
             $event->occurrences += $incoming;
-            $event->last_seen_at = $now;
+            // last_seen_at tracks the latest occurrence and must only move
+            // forward — guard against out-of-order arrivals dragging it back.
+            $event->last_seen_at = ($event->last_seen_at !== null && $event->last_seen_at->greaterThan($occurredAt))
+                ? $event->last_seen_at
+                : $occurredAt;
+            // received_at is the hub receipt timestamp — always now().
             $event->received_at = $now;
             $event->save();
 
