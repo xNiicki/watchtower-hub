@@ -34,8 +34,8 @@ class MonitoredApp extends Model
         return $this->hasOne(AppHealth::class, 'app_id');
     }
 
-    public function events(): HasMany
+    public function metrics(): HasMany
     {
-        return $this->hasMany(AppEvent::class, 'app_id');
+        return $this->hasMany(AppMetric::class, 'app_id');
     }
 }

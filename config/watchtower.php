@@ -10,19 +10,8 @@ return [
         // Minutes since the last received snapshot after which an app is "stale".
         'stale_after' => (int) env('APPS_STALE_AFTER_MINUTES', 15),
 
-        'events' => [
-            // Per-type alert tier. 'critical' pages via ntfy; 'warning' is recorded but quiet.
-            'severity' => [
-                'exception' => env('APP_EVENT_SEVERITY_EXCEPTION', 'critical'),
-                'failed_job' => env('APP_EVENT_SEVERITY_FAILED_JOB', 'critical'),
-                'failed_scheduled_task' => env('APP_EVENT_SEVERITY_FAILED_SCHEDULED_TASK', 'warning'),
-            ],
-            // Minutes of silence after which a firing app-event alert auto-resolves.
-            'quiet_after' => (int) env('APP_EVENT_QUIET_AFTER_MINUTES', 60),
-            // Minutes before a still-firing app-event alert re-pages.
-            'renotify_after' => (int) env('APP_EVENT_RENOTIFY_AFTER_MINUTES', 60),
-            // Days to keep grouped app events before pruning.
-            'retention_days' => (int) env('APP_EVENT_RETENTION_DAYS', 120),
+        'metrics' => [
+            'retention_days' => (int) env('APP_METRIC_RETENTION_DAYS', 30),
         ],
     ],
 
