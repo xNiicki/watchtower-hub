@@ -21,6 +21,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $last_deploy_at
  * @property CarbonImmutable $snapshot_at
  * @property CarbonImmutable $received_at
+ * @property int $buffer_depth
+ * @property string|null $last_ship_error
+ * @property CarbonImmutable|null $degraded_since
  */
 class AppHealth extends Model
 {
@@ -43,6 +46,7 @@ class AppHealth extends Model
             'last_deploy_at' => 'datetime',
             'snapshot_at' => 'immutable_datetime',
             'received_at' => 'immutable_datetime',
+            'degraded_since' => 'immutable_datetime',
         ];
     }
 
